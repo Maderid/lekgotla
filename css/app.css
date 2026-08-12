@@ -1,0 +1,1379 @@
+/* Lekgotla — a warm, high-contrast reading surface. The target-language text is
+   always the largest thing on screen, and diacritics are never allowed to be
+   ambiguous, so the type stack favours faces with clear caron and circumflex
+   shapes at large sizes. */
+
+:root {
+  --bg: #faf7f2;
+  --surface: #ffffff;
+  --surface-2: #f3ede4;
+  --ink: #1c1a17;
+  --ink-2: #4a443c;
+  --muted: #756c60;
+  --line: #e2d9cc;
+
+  --accent: #b8452a;
+  --accent-dark: #94341e;
+  --accent-soft: #fbe9e2;
+
+  --good: #2f6f4f;
+  --good-soft: #e4f1e9;
+  --warn: #9a6212;
+  --warn-soft: #fbf0dc;
+  --bad: #a32f2f;
+  --bad-soft: #fbe6e4;
+
+  --zu: #1f5f8b;
+  --zu-soft: #e3eef6;
+  --nso: #7a5299;
+  --nso-soft: #efe7f6;
+
+  --radius: 14px;
+  --radius-lg: 20px;
+  --shadow: 0 1px 2px rgba(28, 26, 23, 0.05), 0 8px 24px rgba(28, 26, 23, 0.06);
+  --shadow-lg: 0 2px 4px rgba(28, 26, 23, 0.06), 0 18px 44px rgba(28, 26, 23, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17150f;
+    --surface: #211e17;
+    --surface-2: #2b271e;
+    --ink: #f5efe4;
+    --ink-2: #d8cfc0;
+    --muted: #a29685;
+    --line: #3a352a;
+
+    --accent: #e0704f;
+    --accent-dark: #f08a6a;
+    --accent-soft: #3a2119;
+
+    --good: #6fc295;
+    --good-soft: #1d3629;
+    --warn: #e0ae5f;
+    --warn-soft: #372c14;
+    --bad: #e88b83;
+    --bad-soft: #3a1f1c;
+
+    --zu: #7fbde8;
+    --zu-soft: #17303f;
+    --nso: #bda1da;
+    --nso-soft: #2b2137;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 44px rgba(0, 0, 0, 0.45);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 4vw, 2.6rem);
+}
+h2 {
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 1.25rem 1.15rem 5rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 0.875rem;
+}
+.lede {
+  font-size: 1.1rem;
+  color: var(--ink-2);
+}
+
+/* ------------------------------- header -------------------------------- */
+
+.top {
+  padding: 0.25rem 0 1.75rem;
+}
+
+.brand {
+  display: inline-flex;
+  gap: 0.7rem;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.brand strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.brand-sub {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+}
+
+/* -------------------------------- hero --------------------------------- */
+
+.hero {
+  margin-bottom: 1.75rem;
+}
+
+/* ------------------------------- upload -------------------------------- */
+
+.upload-form {
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 3rem;
+}
+
+.drop {
+  display: block;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 2.25rem 1.25rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.drop:hover,
+.drop.is-over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.drop.has-file {
+  border-style: solid;
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+
+.drop-icon {
+  font-size: 2rem;
+}
+.drop-lead {
+  font-size: 1.1rem;
+  margin: 0.4rem 0 0.2rem;
+}
+.drop-hint,
+.drop-file {
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+.drop-file {
+  margin-top: 0.6rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.text-input {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.text-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ------------------------------- buttons ------------------------------- */
+
+.primary,
+.ghost {
+  border-radius: 999px;
+  padding: 0.75rem 1.4rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: transform 0.12s, background 0.15s, border-color 0.15s;
+}
+
+.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.primary:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+.ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-2);
+}
+.ghost:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ghost.subtle {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.primary:active:not(:disabled),
+.ghost:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primary.is-recording {
+  background: var(--bad);
+  animation: pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.72;
+  }
+}
+
+.row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.row.centered {
+  justify-content: center;
+}
+
+.back {
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  text-decoration: none;
+}
+.back:hover {
+  color: var(--accent);
+}
+
+/* -------------------------------- status ------------------------------- */
+
+.status {
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+}
+.status:empty {
+  display: none;
+}
+.status-busy {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.status-error {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+}
+
+/* -------------------------------- steps -------------------------------- */
+
+.how {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+}
+
+.steps {
+  padding-left: 1.2rem;
+  color: var(--ink-2);
+}
+.steps li {
+  margin-bottom: 0.4rem;
+}
+
+/* ------------------------------- cards --------------------------------- */
+
+.recent {
+  margin-top: 2.5rem;
+}
+
+.card-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.challenge-card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s, border-color 0.15s;
+}
+.challenge-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+.challenge-card h3 {
+  font-size: 1rem;
+  margin: 0.5rem 0 0.25rem;
+}
+.challenge-card p {
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.pill {
+  display: inline-block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.pill-zu {
+  background: var(--zu-soft);
+  color: var(--zu);
+}
+.pill-nso {
+  background: var(--nso-soft);
+  color: var(--nso);
+}
+
+/* ---------------------------- challenge head --------------------------- */
+
+.challenge-head {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: start;
+  margin-bottom: 1.5rem;
+}
+.challenge-head h1 {
+  margin: 0.2rem 0 0;
+}
+
+.voice-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.voice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: none;
+}
+.voice-native {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.voice-native .voice-dot {
+  background: var(--good);
+}
+.voice-approximate {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.voice-approximate .voice-dot {
+  background: var(--warn);
+}
+.voice-none {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+.voice-none .voice-dot {
+  background: var(--bad);
+}
+
+.caveat {
+  font-family: system-ui, sans-serif;
+  font-size: 0.83rem;
+  color: var(--muted);
+  width: 100%;
+  max-width: 62ch;
+  margin: 0;
+}
+
+.xp-strip,
+.banner {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  margin-bottom: 1.25rem;
+}
+.banner-win {
+  background: var(--good-soft);
+  color: var(--good);
+  justify-content: center;
+  text-align: center;
+}
+
+/* -------------------------------- levels ------------------------------- */
+
+.levels {
+  display: grid;
+  gap: 0.7rem;
+  margin-bottom: 2.75rem;
+}
+
+.level-card {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s, border-color 0.15s;
+}
+.level-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+.level-card.is-locked {
+  opacity: 0.6;
+  box-shadow: none;
+  background: transparent;
+}
+.level-card.is-passed {
+  border-color: var(--good);
+}
+
+.level-number {
+  font-size: 1.6rem;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--surface-2);
+  flex: none;
+}
+.level-card.is-passed .level-number {
+  background: var(--good-soft);
+}
+
+.level-body h3 {
+  font-size: 1.02rem;
+  margin: 0.15rem 0 0.2rem;
+}
+.level-body p {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+}
+.level-score {
+  margin-top: 0.35rem !important;
+  font-weight: 600;
+}
+.level-score.ok {
+  color: var(--good);
+}
+.level-score.warn {
+  color: var(--warn);
+}
+
+/* ------------------------------- study --------------------------------- */
+
+.study {
+  margin-bottom: 2.5rem;
+}
+
+.study-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  margin-top: 1rem;
+}
+
+.study-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.study-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.target {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.english {
+  font-family: system-ui, sans-serif;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+
+.note,
+.note-line {
+  font-family: system-ui, sans-serif;
+  font-size: 0.78rem;
+  color: var(--warn);
+}
+
+.chip {
+  justify-self: start;
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  margin-top: 0.2rem;
+}
+
+/* ------------------------------- speak --------------------------------- */
+
+.speak {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  flex: none;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.speak:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.speak:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.speak.is-playing {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.speak-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.speak-big {
+  width: auto;
+  height: auto;
+  padding: 0.6rem 1.1rem;
+  gap: 0.45rem;
+  grid-auto-flow: column;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* -------------------------------- rules -------------------------------- */
+
+.rules {
+  margin-bottom: 2.25rem;
+}
+
+.rule {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.55rem;
+}
+.rule summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.rule p {
+  margin: 0.6rem 0 0;
+  color: var(--ink-2);
+  font-size: 0.95rem;
+}
+.examples {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+}
+.examples li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.dialogue {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+.dialogue-line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+.dialogue-target {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+.speaker {
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  white-space: nowrap;
+}
+
+/* --------------------------------- play -------------------------------- */
+
+.play {
+  max-width: 620px;
+}
+
+.play-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+.play-title,
+.play-count {
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.play-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.bar {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.streak {
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--warn);
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.prompt {
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 1.1rem;
+}
+
+/* Everything inside a question is centred on the word being learned. */
+.round-body > .muted,
+.round-body > .note-line {
+  text-align: center;
+}
+
+.prompt-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.4rem;
+}
+
+.big-target {
+  font-size: clamp(2rem, 8vw, 3.1rem);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.big-english {
+  font-family: system-ui, sans-serif;
+  font-size: clamp(1.3rem, 5vw, 1.9rem);
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.question-text {
+  font-size: 1.2rem;
+  text-align: center;
+  max-width: 34ch;
+}
+
+/* Row layout when a play button sits beside the word. */
+.prompt-block > .speak-big + .speak,
+.prompt-block > .speak + .speak {
+  margin-top: -0.35rem;
+}
+
+/* ------------------------------- options ------------------------------- */
+
+.options {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.option:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.option:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.option.is-correct {
+  border-color: var(--good);
+  background: var(--good-soft);
+  color: var(--good);
+  opacity: 1;
+}
+.option.is-wrong {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+  color: var(--bad);
+  opacity: 1;
+}
+
+/* -------------------------------- match -------------------------------- */
+
+.match {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.match-col {
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+}
+
+.match-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  min-height: 56px;
+  transition: border-color 0.15s, background 0.15s, opacity 0.2s;
+}
+.match-item .target {
+  font-size: 1.02rem;
+}
+.match-english {
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+.match-item:hover:not(.is-done) {
+  border-color: var(--accent);
+}
+.match-item.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.match-item.is-done {
+  opacity: 0.35;
+  border-style: dashed;
+  cursor: default;
+  border-color: var(--good);
+}
+.match-item.is-wrong {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+  animation: shake 0.35s;
+}
+
+@keyframes shake {
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* -------------------------------- spell -------------------------------- */
+
+.spell-form {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: center;
+}
+
+.spell-input {
+  font-size: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+  max-width: 380px;
+}
+.spell-input.is-correct {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+.spell-input.is-wrong {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+}
+
+.char-bar {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.char {
+  min-width: 42px;
+  padding: 0.4rem 0.7rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.char:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.playback {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  margin: 0.75rem 0;
+}
+.audio {
+  max-width: 100%;
+}
+
+/* ------------------------------ feedback ------------------------------- */
+
+.feedback {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  margin-top: 1.25rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.92rem;
+}
+.feedback:empty {
+  display: none;
+}
+.feedback.good {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.feedback.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+.feedback.near {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.round-footer {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.round-footer:empty {
+  display: none;
+}
+
+/* ------------------------------- results ------------------------------- */
+
+.result {
+  text-align: center;
+  padding: 3rem 1.25rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+}
+.result-emoji {
+  font-size: 3.2rem;
+  line-height: 1;
+}
+.result-score {
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.result-pass .result-score {
+  color: var(--good);
+}
+.result-fail .result-score {
+  color: var(--warn);
+}
+.result .row {
+  margin-top: 1.25rem;
+}
+
+/* ------------------------------ responsive ----------------------------- */
+
+@media (max-width: 520px) {
+  body {
+    font-size: 16px;
+  }
+  .page {
+    padding: 1rem 0.9rem 4rem;
+  }
+  .match {
+    gap: 0.45rem;
+  }
+  .match-item {
+    padding: 0.6rem;
+    min-height: 50px;
+  }
+  .study-grid,
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ------------------------- static-site additions ------------------------ */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.status-ok {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.banner-setup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+.banner-setup .primary {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.row.spread {
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+
+/* A file input's label styled as a button, since the input itself is hidden. */
+.as-button {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.as-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+select.text-input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2.25rem;
+}
+
+.field span {
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.how .caveat {
+  margin-top: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+/* ---------------------------- scoring display --------------------------- */
+
+.scoreboard {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  margin-bottom: 1rem;
+}
+.scoreboard.is-complete {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+
+.score-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.score-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.scoreboard.is-complete .score-value {
+  color: var(--good);
+}
+.score-max {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.score-side {
+  display: grid;
+  gap: 0.1rem;
+}
+.score-label {
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Points earned so far, shown above every question. */
+.running-score {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.running-score .streak {
+  margin: 0;
+  color: var(--warn);
+}
+
+.points-chip {
+  font-family: system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+  white-space: nowrap;
+}
+/* The chip inherits the feedback colour, so punch the text back out of it. */
+.feedback.good .points-chip { color: var(--good); }
+.feedback.near .points-chip { color: var(--warn); }
+.feedback.bad .points-chip { color: var(--bad); }
+.points-chip::first-letter { color: inherit; }
+
+.feedback-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.feedback-head .points-chip {
+  mix-blend-mode: normal;
+}
+.feedback.good .points-chip { background: var(--good); color: var(--good-soft); }
+.feedback.near .points-chip { background: var(--warn); color: var(--warn-soft); }
+.feedback.bad .points-chip { background: var(--bad); color: var(--bad-soft); }
+
+/* A ruled-out option: clearly gone, still readable, not mistaken for the answer. */
+.option.is-eliminated {
+  border-style: dashed;
+  border-color: var(--line);
+  background: transparent;
+  color: var(--muted);
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.tries {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.improved {
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--good);
+}
+
+/* ------------------------- end-of-challenge chart ----------------------- */
+
+.breakdown {
+  width: 100%;
+  max-width: 360px;
+  display: grid;
+  gap: 0.45rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+}
+
+.breakdown-name {
+  text-align: left;
+  color: var(--ink-2);
+}
+
+.breakdown-bar {
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.breakdown-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.breakdown-score {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 420px) {
+  .breakdown-row {
+    grid-template-columns: 5.5rem 1fr 1.8rem;
+  }
+}
