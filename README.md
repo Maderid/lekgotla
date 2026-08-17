@@ -226,7 +226,7 @@ the reader still parses a real course PDF, so this cannot regress silently.
 
 ```bash
 node serve.js &
-node tools/check.js          # 32 checks — the pipeline end to end
+node tools/check.js          # 36 checks — the pipeline end to end
 node tools/scoring-check.js  # 31 checks — the points system
 ```
 
@@ -236,7 +236,7 @@ a fourth, that a worse replay never lowers a stored best, that a level marked
 out of 100 gives the same score for six questions as for eight, and that the
 challenge total is the five bests added up.
 
-`check.js` is 32 checks in a real browser. It reads the actual SEP 119 and ZUL 119 PDFs
+`check.js` is 36 checks in a real browser. It reads the actual SEP 119 and ZUL 119 PDFs
 through the real parser — including the 94-page one — and mocks only the call to
 Google, so the full pipeline runs without spending anyone's quota. It covers the
 upload flow, that the validator drops junk entries, that a caron survives from

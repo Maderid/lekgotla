@@ -145,7 +145,9 @@ export async function readDocument(file) {
       // Rather than dead-ending on a browser it cannot run in, hand the file
       // over to be read visually instead — slower and more tokens, but it
       // works everywhere.
-      if (buffer.byteLength > MAX_RAW_PDF_BYTES) {
+      // file.size, not buffer.byteLength — by now pdf.js has detached the
+      // buffer and its length reads as zero.
+      if (file.size > MAX_RAW_PDF_BYTES) {
         throw new Error(
           'This browser could not read that PDF, and the file is too large to send for reading as-is. Try it in Chrome on a computer, or split the document up.'
         );
@@ -180,6 +182,12 @@ export async function readDocument(file) {
   }
 
   result.filename = file.name;
-  result.buffer = buffer;
+
+  // Deliberately NOT a copy of the bytes. pdf.js transfers the ArrayBuffer to
+  // its worker, which detaches it here — keeping a reference would hand the
+  // fallback an empty buffer ("Buffer is already detached"). Hold the File
+  // instead and re-read it only if the fallback actually needs the bytes, which
+  // also avoids carrying a second copy of the file around on a phone.
+  result.file = file;
   return result;
 }

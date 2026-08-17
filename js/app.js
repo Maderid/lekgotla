@@ -401,7 +401,9 @@ function showHome() {
       step(
         doc.needsVision
           ? doc.fallbackReason
-            ? 'This browser could not read the PDF directly, so the pages are being read visually instead. This takes a little longer.'
+            ? // Naming the reason makes a screenshot enough to diagnose this,
+              // which is how the detached-buffer bug got found.
+              `This browser could not read the PDF directly (${doc.fallbackReason}), so the pages are being read visually instead. This takes a little longer.`
             : 'No text layer found, so the pages are being read visually. This takes a little longer.'
           : `Read ${doc.pagesRead ? `${doc.pagesRead} pages` : 'the document'}. Building the levels…`
       );

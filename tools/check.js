@@ -219,17 +219,44 @@ const setKey = (page) =>
 
   // Older iOS Safari cannot run the modern pdf.js build. Rather than dead-end,
   // an unreadable PDF must fall through to being read visually.
-  const fallback = await page.evaluate(async () => {
+  const fallback = await page.evaluate(async (url) => {
     const { readDocument } = await import('/js/documents.js');
-    const bytes = new TextEncoder().encode('%PDF-1.4 this is not really a pdf');
-    const file = new File([bytes], 'broken.pdf', { type: 'application/pdf' });
-    const doc = await readDocument(file);
-    return { needsVision: doc.needsVision, reason: Boolean(doc.fallbackReason), hasBuffer: Boolean(doc.buffer) };
-  });
+
+    // A real PDF, so pdf.js gets far enough to transfer the bytes to its worker
+    // and detach them here, then fails. That combination is what broke the
+    // fallback on iPhone: it held a detached buffer with nothing in it.
+    const blob = await (await fetch(url)).blob();
+    const real = new File([blob], 'real.pdf', { type: 'application/pdf' });
+
+    const broken = new File([new TextEncoder().encode('%PDF-1.4 not really a pdf')], 'broken.pdf', {
+      type: 'application/pdf',
+    });
+
+    const brokenDoc = await readDocument(broken);
+
+    // The bytes must still be readable at the point the fallback needs them,
+    // which is the assertion the earlier version of this test was missing: it
+    // only checked that a buffer object existed, and a detached one does.
+    const recovered = await brokenDoc.file.arrayBuffer();
+
+    return {
+      needsVision: brokenDoc.needsVision,
+      reason: brokenDoc.fallbackReason || '',
+      recoveredBytes: recovered ? recovered.byteLength : 0,
+      keepsNoStaleBuffer: brokenDoc.buffer === undefined,
+      realStillParses: (await readDocument(real)).pagesRead === 20,
+    };
+  }, `${BASE}/fixtures/sepedi-greetings.pdf`);
 
   check('an unreadable PDF falls back to visual reading instead of failing', fallback.needsVision === true);
-  check('the fallback records why it happened', fallback.reason === true);
-  check('the fallback keeps the file bytes to send', fallback.hasBuffer === true);
+  check('the fallback records why it happened', fallback.reason.length > 0, fallback.reason.slice(0, 50));
+  check(
+    'the fallback can still read the file bytes it needs to send',
+    fallback.recoveredBytes > 0,
+    `${fallback.recoveredBytes} bytes recovered`
+  );
+  check('no detached buffer is kept around', fallback.keepsNoStaleBuffer === true);
+  check('a good PDF is unaffected by the fallback path', fallback.realStillParses === true);
 
   const polyfilled = await page.evaluate(async () => {
     await import('/js/polyfills.js');
@@ -406,6 +433,34 @@ const setKey = (page) =>
     'a document with too little content is refused clearly',
     /at least 6/.test(await page.locator('.status-error').textContent())
   );
+
+  /* ------------- the fallback, end to end through the real form ----------- */
+
+  // This is the exact path an iPhone takes when pdf.js cannot run: parsing
+  // fails, the file itself is sent to be read, and a challenge still appears.
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await setKey(page);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.unroute('**generativelanguage.googleapis.com/**');
+  await mockGoogle(page);
+
+  const sentInline = [];
+  await page.route('**generativelanguage.googleapis.com/**:generateContent*', async (route) => {
+    const body = route.request().postDataJSON();
+    const parts = body.contents[0].parts;
+    sentInline.push(parts.some((part) => part.inline_data && part.inline_data.data.length > 0));
+    await route.fallback();
+  });
+
+  const corrupt = path.join(FIXTURES, 'corrupt-for-test.pdf');
+  fs.writeFileSync(corrupt, '%PDF-1.4 deliberately unparseable, for the fallback test');
+  await page.locator('#file').setInputFiles(corrupt);
+  await page.locator('button[type=submit]').click();
+
+  await page.waitForSelector('.level-card', { timeout: 30000 });
+  check('an unparseable PDF still produces a challenge end to end', (await page.locator('.level-card').count()) === 5);
+  check('the fallback actually sends the file bytes', sentInline.some(Boolean), `inline_data present: ${sentInline}`);
+  fs.unlinkSync(corrupt);
 
   /* ------------------------ older Safari, simulated ----------------------- */
 

@@ -216,9 +216,16 @@ export async function extractPack(doc, { key, model, signal }) {
   const parts = [];
 
   if (doc.needsVision && doc.kind === 'pdf') {
-    // No usable text layer, so let the model read the pages themselves.
+    // No usable text layer, so let the model read the pages themselves. Read
+    // the File afresh: whatever bytes were handed to pdf.js are gone, because
+    // it transfers them to its worker.
+    const bytes = await doc.file.arrayBuffer();
+    if (!bytes || !bytes.byteLength) {
+      throw new Error('That file could not be read. Try choosing it again.');
+    }
+
     parts.push({
-      inline_data: { mime_type: 'application/pdf', data: arrayBufferToBase64(doc.buffer) },
+      inline_data: { mime_type: 'application/pdf', data: arrayBufferToBase64(bytes) },
     });
     parts.push({
       text: 'This PDF has little or no text layer, so read the pages directly and build the challenge from what you see.',
