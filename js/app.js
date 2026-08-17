@@ -1,3 +1,4 @@
+import './polyfills.js';
 import { speech, listenOnce, recognitionAvailable, Recorder } from './speech.js';
 import {
   buildLevels,
@@ -302,6 +303,26 @@ function showSettings() {
   else modelSelect.replaceChildren(el('option', { value: '', text: 'Add a key first' }));
 }
 
+/**
+ * Everything thrown deliberately in this app carries a sentence a learner can
+ * act on. Anything else is a programming error leaking through, and showing
+ * someone "undefined is not a function" helps nobody — so name it as a fault in
+ * the app, say what to try, and keep the detail for whoever has to fix it.
+ */
+function friendlyError(error) {
+  const message = (error && error.message) || String(error);
+
+  const internal =
+    error instanceof TypeError ||
+    error instanceof ReferenceError ||
+    /undefined is not|is not a function|cannot read prop|null is not an object/i.test(message);
+
+  if (!internal) return message;
+
+  console.error('[lekgotla] unexpected failure:', error);
+  return `Something in the app broke while reading that file, rather than anything being wrong with the file itself. Try it in Chrome on a computer — and if you can, report this detail: ${message}`;
+}
+
 /* --------------------------------- home ---------------------------------- */
 
 function showHome() {
@@ -379,7 +400,9 @@ function showHome() {
 
       step(
         doc.needsVision
-          ? 'No text layer found, so the pages are being read visually. This takes a little longer.'
+          ? doc.fallbackReason
+            ? 'This browser could not read the PDF directly, so the pages are being read visually instead. This takes a little longer.'
+            : 'No text layer found, so the pages are being read visually. This takes a little longer.'
           : `Read ${doc.pagesRead ? `${doc.pagesRead} pages` : 'the document'}. Building the levels…`
       );
 
@@ -403,7 +426,7 @@ function showHome() {
       navigate(`#/c/${saved.id}`);
     } catch (error) {
       status.className = 'status status-error';
-      status.replaceChildren(el('span', { text: error.message }));
+      status.replaceChildren(el('span', { text: friendlyError(error) }));
       submit.disabled = false;
     }
   });

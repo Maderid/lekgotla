@@ -4,8 +4,12 @@
  *
  * pdf.js and mammoth are vendored rather than pulled from a CDN so the site
  * keeps working on any static host, offline, and forever — no third party can
- * take a version down underneath it.
+ * take a version down underneath it. The vendored pdf.js is the *legacy* build:
+ * the modern one calls Promise.withResolvers, which older Safari lacks, and it
+ * failed on iPhones with an unhelpful "undefined is not a function".
  */
+
+import './polyfills.js';
 
 const MAX_PAGES = 100;
 const MAX_CHARS = 90000;
@@ -124,6 +128,9 @@ function readPlainText(buffer) {
   };
 }
 
+/** Bigger than this and sending the raw file for reading is not realistic. */
+const MAX_RAW_PDF_BYTES = 18 * 1024 * 1024;
+
 export async function readDocument(file) {
   const name = (file.name || '').toLowerCase();
   const type = file.type || '';
@@ -131,7 +138,30 @@ export async function readDocument(file) {
 
   let result;
   if (type === 'application/pdf' || name.endsWith('.pdf')) {
-    result = await readPdf(buffer);
+    try {
+      result = await readPdf(buffer);
+    } catch (error) {
+      // The in-browser PDF reader is the fast, cheap path, not the only one.
+      // Rather than dead-ending on a browser it cannot run in, hand the file
+      // over to be read visually instead — slower and more tokens, but it
+      // works everywhere.
+      if (buffer.byteLength > MAX_RAW_PDF_BYTES) {
+        throw new Error(
+          'This browser could not read that PDF, and the file is too large to send for reading as-is. Try it in Chrome on a computer, or split the document up.'
+        );
+      }
+
+      console.warn('[lekgotla] in-browser PDF reading failed, falling back:', error);
+      result = {
+        kind: 'pdf',
+        text: '',
+        totalPages: 0,
+        pagesRead: 0,
+        truncated: false,
+        needsVision: true,
+        fallbackReason: error && error.message ? error.message : String(error),
+      };
+    }
   } else if (name.endsWith('.docx') || type.includes('wordprocessingml')) {
     result = await readDocx(buffer);
   } else if (name.endsWith('.txt') || name.endsWith('.md') || type.startsWith('text/')) {

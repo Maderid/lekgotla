@@ -203,11 +203,30 @@ word for exactly this reason.
 
 ---
 
+## Browser support
+
+The vendored pdf.js is the **legacy** build on purpose. The modern one calls
+`Promise.withResolvers()`, which only arrived in Safari 17.4 — on an older
+iPhone that meant PDF upload died with "undefined is not a function" the moment
+a file was chosen. `js/polyfills.js` fills the same gap for our own code.
+
+Beyond that there are two safety nets:
+
+- If in-browser PDF reading fails for **any** reason, the file is sent to be
+  read visually instead. Slower and more tokens, but it works on browsers where
+  pdf.js cannot run at all.
+- An unexpected internal error is reported as a fault in the app, with a
+  suggestion to try desktop Chrome, rather than showing raw JavaScript at a
+  learner.
+
+`tools/check.js` deletes `Promise.withResolvers` before page load and asserts
+the reader still parses a real course PDF, so this cannot regress silently.
+
 ## Testing
 
 ```bash
 node serve.js &
-node tools/check.js          # 26 checks — the pipeline end to end
+node tools/check.js          # 32 checks — the pipeline end to end
 node tools/scoring-check.js  # 31 checks — the points system
 ```
 
@@ -217,7 +236,7 @@ a fourth, that a worse replay never lowers a stored best, that a level marked
 out of 100 gives the same score for six questions as for eight, and that the
 challenge total is the five bests added up.
 
-`check.js` is 26 checks in a real browser. It reads the actual SEP 119 and ZUL 119 PDFs
+`check.js` is 32 checks in a real browser. It reads the actual SEP 119 and ZUL 119 PDFs
 through the real parser — including the 94-page one — and mocks only the call to
 Google, so the full pipeline runs without spending anyone's quota. It covers the
 upload flow, that the validator drops junk entries, that a caron survives from
@@ -246,7 +265,7 @@ js/
   speech.js      voice selection, respelling, recognition, similarity scoring
   progress.js    local progress
   store.js       challenge storage, share encoding, import and export
-vendor/          pdf.js and mammoth, vendored so no CDN can break the site
+vendor/          pdf.js (legacy build) and mammoth, vendored so no CDN can break the site
 tools/check.js   the browser test suite
 fixtures/        the course PDFs the tests read
 ```

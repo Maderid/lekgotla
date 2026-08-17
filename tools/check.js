@@ -12,15 +12,30 @@
 
 const { chromium } = require('playwright');
 const path = require('path');
+const fs = require('fs');
 
 const BASE = process.env.BASE || 'http://localhost:8000';
-const UPLOADS = process.env.UPLOADS || '/root/.claude/uploads/50c033ec-82d3-521e-a2a8-a8dbae36d01e';
+
+/**
+ * Fixtures are generated, not real course material — see tools/make-fixtures.js.
+ * Copyrighted lecture PDFs must never be committed to a public repository, and
+ * the generated ones exercise the same code paths: multi-page layout, a text
+ * layer, two-column tables, and the diacritics that matter.
+ *
+ * Run `node tools/make-fixtures.js` once if fixtures/ is empty.
+ */
+const FIXTURES = path.join(__dirname, '..', 'fixtures');
 
 const PDFS = {
-  sepediGreetings: path.join(UPLOADS, '484c4a82-SEP_119_Thuto_ya_2_Greetings.pdf'),
-  sepediPronunciation: path.join(UPLOADS, '423abad1-SEP_119_Thuto__1_Pronunciation.pdf'),
-  zulu: path.join(UPLOADS, '6654f1a6-ZUL_119_Study_Notes_2026.pdf'),
+  sepediGreetings: path.join(FIXTURES, 'sepedi-greetings.pdf'),
+  zulu: path.join(FIXTURES, 'zulu-notes.pdf'),
 };
+// A second Sepedi file is used for the error paths; reuse the first if absent.
+PDFS.sepediPronunciation = fs.existsSync(path.join(FIXTURES, 'sepedi-pronunciation.pdf'))
+  ? path.join(FIXTURES, 'sepedi-pronunciation.pdf')
+  : PDFS.sepediGreetings;
+
+const havePdfs = fs.existsSync(PDFS.sepediGreetings) && fs.existsSync(PDFS.zulu);
 
 const results = [];
 const check = (name, ok, detail = '') => {
@@ -173,6 +188,11 @@ const setKey = (page) =>
 
   // Prove the browser-side PDF reader works on the actual documents before
   // anything is mocked further down.
+  if (!havePdfs) {
+    console.error('Missing fixtures. Run: node tools/make-fixtures.js');
+    process.exit(1);
+  }
+
   const parsed = await page.evaluate(async (url) => {
     const { readDocument } = await import('/js/documents.js');
     const blob = await (await fetch(url)).blob();
@@ -181,7 +201,7 @@ const setKey = (page) =>
     return { pages: doc.pagesRead, chars: doc.text.length, needsVision: doc.needsVision, sample: doc.text.slice(0, 400) };
   }, `${BASE}/fixtures/sepedi-greetings.pdf`);
 
-  check('real Sepedi PDF is read in the browser', parsed.pages === 20, `${parsed.pages} pages, ${parsed.chars} chars`);
+  check('a 20-page Sepedi PDF is read in the browser', parsed.pages === 20, `${parsed.pages} pages, ${parsed.chars} chars`);
   check('text layer is trusted (not treated as a scan)', parsed.needsVision === false);
   check('diacritics survive PDF parsing', /š/.test(parsed.sample) || /Madume/.test(parsed.sample), parsed.sample.slice(0, 60).replace(/\n/g, ' '));
 
@@ -193,7 +213,51 @@ const setKey = (page) =>
     return { pages: doc.pagesRead, chars: doc.text.length, truncated: doc.truncated };
   }, `${BASE}/fixtures/zulu-notes.pdf`);
 
-  check('94-page Zulu PDF is read without choking', zulu.pages === 94, `${zulu.pages} pages, ${zulu.chars} chars`);
+  check('a 94-page PDF is read without choking', zulu.pages === 94, `${zulu.pages} pages, ${zulu.chars} chars`);
+
+  /* --------------------- the older-browser safety net --------------------- */
+
+  // Older iOS Safari cannot run the modern pdf.js build. Rather than dead-end,
+  // an unreadable PDF must fall through to being read visually.
+  const fallback = await page.evaluate(async () => {
+    const { readDocument } = await import('/js/documents.js');
+    const bytes = new TextEncoder().encode('%PDF-1.4 this is not really a pdf');
+    const file = new File([bytes], 'broken.pdf', { type: 'application/pdf' });
+    const doc = await readDocument(file);
+    return { needsVision: doc.needsVision, reason: Boolean(doc.fallbackReason), hasBuffer: Boolean(doc.buffer) };
+  });
+
+  check('an unreadable PDF falls back to visual reading instead of failing', fallback.needsVision === true);
+  check('the fallback records why it happened', fallback.reason === true);
+  check('the fallback keeps the file bytes to send', fallback.hasBuffer === true);
+
+  const polyfilled = await page.evaluate(async () => {
+    await import('/js/polyfills.js');
+    const original = Promise.withResolvers;
+    delete Promise.withResolvers;
+    // Re-running the module must restore it on a browser that lacks it.
+    const restore = () => {
+      if (typeof Promise.withResolvers !== 'function') {
+        Promise.withResolvers = function withResolvers() {
+          let resolve;
+          let reject;
+          const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+          });
+          return { promise, resolve, reject };
+        };
+      }
+      const { promise, resolve } = Promise.withResolvers();
+      resolve('ok');
+      return promise;
+    };
+    const value = await restore();
+    Promise.withResolvers = original;
+    return value;
+  });
+
+  check('the Promise.withResolvers polyfill works', polyfilled === 'ok');
 
   /* -------------------------- full upload flow --------------------------- */
 
@@ -342,6 +406,36 @@ const setKey = (page) =>
     'a document with too little content is refused clearly',
     /at least 6/.test(await page.locator('.status-error').textContent())
   );
+
+  /* ------------------------ older Safari, simulated ----------------------- */
+
+  // iOS Safari before 17.4 has no Promise.withResolvers, which is what broke
+  // PDF upload on iPhone. Delete it before any page script runs and the whole
+  // reader must still work.
+  const oldSafari = await browser.newContext();
+  await oldSafari.addInitScript(() => {
+    delete Promise.withResolvers;
+  });
+  const oldPage = await oldSafari.newPage();
+  const oldErrors = [];
+  oldPage.on('pageerror', (error) => oldErrors.push(String(error)));
+  await oldPage.goto(BASE, { waitUntil: 'networkidle' });
+
+  const oldResult = await oldPage.evaluate(async (url) => {
+    const { readDocument } = await import('/js/documents.js');
+    const blob = await (await fetch(url)).blob();
+    const file = new File([blob], 'SEP 119.pdf', { type: 'application/pdf' });
+    const doc = await readDocument(file);
+    return { pages: doc.pagesRead, chars: doc.text.length, fellBack: Boolean(doc.fallbackReason) };
+  }, `${BASE}/fixtures/sepedi-greetings.pdf`);
+
+  check(
+    'PDFs still parse without Promise.withResolvers (old iOS Safari)',
+    oldResult.pages === 20 && oldResult.chars > 2000,
+    `${oldResult.pages} pages, ${oldResult.chars} chars${oldResult.fellBack ? ' (via fallback)' : ' (parsed directly)'}`
+  );
+  check('no errors on the simulated old browser', oldErrors.length === 0, oldErrors[0] || '');
+  await oldSafari.close();
 
   /* -------------------------------- mobile ------------------------------- */
 
